@@ -1,7 +1,6 @@
 <!doctype html>
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
-<link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../iron-selector/iron-selectable.html">
 <link rel="import" href="../neon-animation/animations/slide-from-bottom-animation.html">
 <link rel="import" href="../neon-animation/animations/slide-down-animation.html">
@@ -26,7 +25,7 @@ A material design modal [bottom sheet](https://www.google.com/design/spec/compon
 	<template>
 		<style>
 			.dialog {
-				background-color: rgba(0,0,0,0.6)!important;
+				background-color: rgba(0,0,0,0.6) !important;
 				margin: 0!important;
 				@apply(--layout-fixed-bottom);
 			}
@@ -37,10 +36,11 @@ A material design modal [bottom sheet](https://www.google.com/design/spec/compon
 				bottom: 0;
 				margin: 0 !important;
 				padding: 0 !important;
+				@apply(--paper-bottom-sheet-content);
 			}
 		</style>
 
-		<paper-dialog id="dialog" class="dialog" animation-config="{{_dialogAnimationConfig}}" modal="[[modal]]" with-backdrop="[[withBackdrop]]" on-iron-overlay-closed="_attemptRemoval" auto-fit-on-attach>
+		<paper-dialog id="dialog" class="dialog" animation-config="{{_dialogAnimationConfig}}" modal="[[modal]]" with-backdrop="[[withBackdrop]]" auto-fit-on-attach>
 			<div class="content">
 				<content id="items"></content>
 				<paper-bottom-sheet-item hidden$="[[!modal]]" id="cancel" text="[[cancelText]]" icon="icons:close" on-tap="close"></paper-bottom-sheet-item>
@@ -81,6 +81,11 @@ A material design modal [bottom sheet](https://www.google.com/design/spec/compon
 				reflectToAttribute: true
 			},
 
+			parent: {
+				type: Object,
+				value: null
+			},
+
 			/**
 			 * True if the bottom sheet should slide in from the bottom on entry
 			 */
@@ -116,23 +121,26 @@ A material design modal [bottom sheet](https://www.google.com/design/spec/compon
 		 * Open the bottom sheet and append it to the DOM.
 		 */
 		open: function() {
-			Polymer.dom(document.body).appendChild(this);
+			if (!this._patched) {
+				this._patched = true;
 
-			// Wait until dialog is added to the DOM (required for Safari)
-			setTimeout(function() {
-				this.$.dialog.open();
-			}.bind(this), 1);
+				var root = this.parent && this.parent.root && Polymer.dom(this.parent.root);
+				if (root && (this.parentNode !== this.parent || this.parentNode !== root)) {
+					root.insertBefore(this, root.firstChild);
+					return this.async(function () {
+						this.open();
+					}.bind(this), 1);
+				}
+			}
+
+			this.$.dialog.open();
 		},
+
 		/**
 		 * Close the bottom sheet and remove it from the DOM.
 		 */
 		close: function() {
 			this.$.dialog.close();
-
-			// Remove the dialog from the DOM if there is no animation
-			if (!this.slide) {
-				this._attemptRemoval();
-			}
 		},
 
 		/**
@@ -155,14 +163,6 @@ A material design modal [bottom sheet](https://www.google.com/design/spec/compon
 					node: this.$.dialog
 				}
 			};
-		},
-
-		/**
-		 * Runs when the dialog is closed. Will remove this from the DOM
-		 */
-		_attemptRemoval: function() {
-			// Remove this element from DOM if there is an animation and the dialog just closed
-			Polymer.dom(this.parentNode).removeChild(this);
 		}
 	});
 
